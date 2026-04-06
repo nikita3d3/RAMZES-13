@@ -70,11 +70,11 @@ const AIChatModule = () => {
     }
   };
 
-  const sendWithMessages = async (msgs: Message[]) => {
+ const sendWithMessages = async (msgs: Message[]) => {
     if (!apiKey) { setShowSettings(true); return; }
     setLoading(true);
     try {
-     const res = await fetch(
+      const res = await fetch(
         https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey},
         {
           method: 'POST',
@@ -86,6 +86,7 @@ const AIChatModule = () => {
           })
         }
       );
+
       const data = await res.json();
       if (data?.error) {
         const errMsg = data.error.code === 429
