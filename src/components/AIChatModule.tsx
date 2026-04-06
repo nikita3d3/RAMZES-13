@@ -16,7 +16,6 @@ const AIChatModule = () => {
   const [messages, setMessages] = useLocalStorage<Message[]>('ramzes-chat', []);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  // Рекомендуется оставить пустую строку для безопасности и вводить ключ через настройки
   const [apiKey, setApiKey] = useLocalStorage('ramzes-gemini-key-v2', '');
   const [showSettings, setShowSettings] = useState(false);
   const [keyInput, setKeyInput] = useState(apiKey);
@@ -61,14 +60,13 @@ const AIChatModule = () => {
     }
   };
 
-const sendWithMessages = async (msgs: Message[]) => {
+  const sendWithMessages = async (msgs: Message[]) => {
     if (!apiKey) { 
       setShowSettings(true); 
       return; 
     }
     setLoading(true);
     try {
-      // Формируем единый текст: Инструкция Асириса + Данные пользователя + Вопрос
       const fullPrompt = `${ASIRIS_SYSTEM}\n\n${getUserContext()}\n\nЗАПРОС СУБЪЕКТА: ${msgs[msgs.length - 1].content}`;
 
       const res = await fetch(
@@ -94,25 +92,12 @@ const sendWithMessages = async (msgs: Message[]) => {
       const data = await res.json();
       
       if (data?.error) {
-        // Если API вернул ошибку (ключ, лимиты и т.д.)
-        const errMsg = `⚠️ Сбой системы (${data.error.code}): ${data.error.message}`;
+        const errMsg = `⚠️ Ошибка системы (${data.error.code}): ${data.error.message}`;
         setMessages(prev => [...prev, { role: 'assistant', content: errMsg }]);
-        return;
+      } else {
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'ОТКАЗ: Нейросеть не прислала ответ.';
+        setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
       }
-
-      // Извлекаем ответ
-      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'ОТКАЗ: Нейросеть не прислала ответ.';
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
-      
-    } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ КРИТИЧЕСКАЯ ОШИБКА: Соединение с ядром разорвано.' }]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Ошибка связи с нейросетью.';
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Ошибка соединения с ядром.' }]);
     } finally {
@@ -138,42 +123,39 @@ const sendWithMessages = async (msgs: Message[]) => {
   };
 
   return (
-    <div className="glass-panel rounded-lg p-4 glow-border transition-all duration-300 h-[600px] flex flex-col bg-background/50 border border-primary/20 shadow-lg">
+    <div className="glass-panel rounded-lg p-4 glow-border transition-all duration-300 h-[600px] flex flex-col bg-background/50 border border-primary/20">
       <div className="flex items-center gap-2 mb-3 border-b border-primary/10 pb-2">
         <Bot className="w-5 h-5 text-primary" />
         <h2 className="font-display text-lg text-primary tracking-wider uppercase">Asiris Neural Core</h2>
         <div className="ml-auto flex gap-1">
-          <button onClick={exportContext} title="Анализ данных" className="text-muted-foreground hover:text-primary p-1 transition-colors">
+          <button onClick={exportContext} className="text-muted-foreground hover:text-primary p-1">
             <Download className="w-4 h-4" />
           </button>
-          <button onClick={() => setMessages([])} title="Очистить лог" className="text-muted-foreground hover:text-destructive p-1 transition-colors">
+          <button onClick={() => setMessages([])} className="text-muted-foreground hover:text-destructive p-1">
             <Trash2 className="w-4 h-4" />
           </button>
-          <button onClick={() => { setKeyInput(apiKey); setShowSettings(!showSettings); }} title="Настройки" className="text-muted-foreground hover:text-primary p-1 transition-colors">
+          <button onClick={() => { setKeyInput(apiKey); setShowSettings(!showSettings); }} className="text-muted-foreground hover:text-primary p-1">
             <Settings className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {showSettings && (
-        <div className="bg-muted/80 backdrop-blur-md rounded-md p-3 mb-3 border border-primary/30 animate-in fade-in zoom-in duration-200">
+        <div className="bg-muted/80 rounded-md p-3 mb-3 border border-primary/30">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-primary font-bold uppercase tracking-tighter">System Access Key</span>
-            <button onClick={() => setShowSettings(false)} className="text-muted-foreground hover:text-primary">
-              <X className="w-3 h-3" />
-            </button>
+            <span className="text-xs text-primary font-bold uppercase">System Access Key</span>
+            <button onClick={() => setShowSettings(false)}><X className="w-3 h-3" /></button>
           </div>
           <div className="flex gap-2">
             <input 
               type="password" 
               value={keyInput} 
               onChange={e => setKeyInput(e.target.value)}
-              placeholder="Gemini API Key..."
-              className="bg-background border border-primary/20 rounded px-2 py-1 text-sm flex-1 focus:border-primary outline-none" 
+              className="bg-background border border-primary/20 rounded px-2 py-1 text-sm flex-1 outline-none" 
             />
             <button 
               onClick={() => { setApiKey(keyInput); setShowSettings(false); }}
-              className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm hover:bg-primary/90 transition-colors"
+              className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm"
             >
               SAVE
             </button>
@@ -181,18 +163,13 @@ const sendWithMessages = async (msgs: Message[]) => {
         </div>
       )}
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 scrollbar-thin scrollbar-thumb-primary/20">
-        {messages.length === 0 && (
-          <div className="h-full flex items-center justify-center text-muted-foreground/40 text-xs uppercase tracking-widest text-center px-8">
-            Ядро Асирис ожидает ввода данных для анализа...
-          </div>
-        )}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-sm px-3 py-2 text-sm leading-relaxed ${
+            <div className={`max-w-[85%] rounded-sm px-3 py-2 text-sm ${
               m.role === 'user' 
                 ? 'bg-primary/10 border-r-2 border-primary text-primary-foreground' 
-                : 'bg-muted/30 border-l-2 border-muted-foreground text-foreground'
+                : 'bg-muted/30 border-l-2 border-muted-foreground'
             }`}>
               <div className="text-[10px] uppercase opacity-50 mb-1 font-bold">
                 {m.role === 'user' ? 'Subject' : 'Asiris'}
@@ -202,10 +179,8 @@ const sendWithMessages = async (msgs: Message[]) => {
           </div>
         ))}
         {loading && (
-          <div className="flex justify-start">
-            <div className="bg-muted/10 px-3 py-2 text-[10px] text-primary animate-pulse uppercase tracking-widest">
-              Выполнение протокола анализа...
-            </div>
+          <div className="text-[10px] text-primary animate-pulse uppercase tracking-widest">
+            Анализ данных...
           </div>
         )}
       </div>
@@ -216,12 +191,12 @@ const sendWithMessages = async (msgs: Message[]) => {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
           placeholder="ВВЕДИТЕ ЗАПРОС..."
-          className="bg-transparent border border-primary/20 rounded-sm px-3 py-2 text-sm flex-1 outline-none focus:border-primary/50 placeholder:text-muted-foreground/30" 
+          className="bg-transparent border border-primary/20 rounded-sm px-3 py-2 text-sm flex-1 outline-none" 
         />
         <button 
           onClick={sendMessage} 
           disabled={loading || !input.trim()} 
-          className="bg-primary/20 hover:bg-primary/40 text-primary p-2 rounded-sm transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          className="bg-primary/20 hover:bg-primary/40 text-primary p-2 rounded-sm disabled:opacity-20"
         >
           <Send className="w-4 h-4" />
         </button>
