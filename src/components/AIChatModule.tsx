@@ -51,39 +51,30 @@ const AIChatModule = () => {
         }
       }
 
-      return `\nТекущие показатели пользователя:
-- Баланс: ${balance}, Цель: ${goal}
-- Задачи: ${subjects.length}, прогресс: ${subjects.map((s: any) => `${s.name}: ${s.done}/${s.total}`).join(', ') || 'нет'}
-- Био-индекс RAMZES: ${bioIndex}/10`;
-    } catch {
-      return '';
-    }
+      return `\nПоказатели пользователя:\n- Баланс: ${balance}, Цель: ${goal}\n- Задачи: ${subjects.length}\n- Био-индекс: ${bioIndex}/10`;
+    } catch { return ''; }
   };
 
   const sendWithMessages = async (msgs: Message[]) => {
-    if (!apiKey) { 
-      setShowSettings(true); 
-      return; 
-    }
+    if (!apiKey) { setShowSettings(true); return; }
     setLoading(true);
     try {
-      const fullPrompt = `${ASIRIS_SYSTEM}\n\n${getUserContext()}\n\nЗАПРОС СУБЪЕКТА: ${msgs[msgs.length - 1].content}`;
+      // Ключевое исправление: формирование промпта внутри правильной структуры v1beta
+      const promptText = `${ASIRIS_SYSTEM}\n\n${getUserContext()}\n\nВопрос: ${msgs[msgs.length - 1].content}`;
 
       const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: fullPrompt }]
-              }
-            ],
+            contents: [{
+              role: "user",
+              parts: [{ text: promptText }]
+            }],
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 800,
+              maxOutputTokens: 500,
             }
           })
         }
@@ -92,14 +83,14 @@ const AIChatModule = () => {
       const data = await res.json();
       
       if (data?.error) {
-        const errMsg = `⚠️ Ошибка системы (${data.error.code}): ${data.error.message}`;
-        setMessages(prev => [...prev, { role: 'assistant', content: errMsg }]);
+        const errorMsg = `⚠️ Ошибка (${data.error.code}): ${data.error.message}`;
+        setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
       } else {
-        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'ОТКАЗ: Нейросеть не прислала ответ.';
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Ошибка ядра.';
         setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
       }
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Ошибка соединения с ядром.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Ошибка связи.' }]);
     } finally {
       setLoading(false);
     }
@@ -114,90 +105,54 @@ const AIChatModule = () => {
     await sendWithMessages(newMessages);
   };
 
-  const exportContext = () => {
-    const ctx = getUserContext();
-    const contextMsg: Message = { role: 'user', content: `[ОТЧЕТ] Проанализируй мои показатели: ${ctx}` };
-    const newMsgs = [...messages, contextMsg];
-    setMessages(newMsgs);
-    sendWithMessages(newMsgs);
-  };
-
   return (
-    <div className="glass-panel rounded-lg p-4 glow-border transition-all duration-300 h-[600px] flex flex-col bg-background/50 border border-primary/20">
-      <div className="flex items-center gap-2 mb-3 border-b border-primary/10 pb-2">
+    <div className="glass-panel rounded-lg p-4 h-[600px] flex flex-col bg-background/50 border border-primary/20 shadow-xl">
+      <div className="flex items-center gap-2 mb-4 border-b border-primary/10 pb-2">
         <Bot className="w-5 h-5 text-primary" />
-        <h2 className="font-display text-lg text-primary tracking-wider uppercase">Asiris Neural Core</h2>
-        <div className="ml-auto flex gap-1">
-          <button onClick={exportContext} className="text-muted-foreground hover:text-primary p-1">
-            <Download className="w-4 h-4" />
-          </button>
-          <button onClick={() => setMessages([])} className="text-muted-foreground hover:text-destructive p-1">
+        <h2 className="font-display text-primary uppercase tracking-widest">Asiris Neural Core</h2>
+        <div className="ml-auto flex gap-2">
+          <button onClick={() => setMessages([])} className="text-muted-foreground hover:text-destructive transition-colors">
             <Trash2 className="w-4 h-4" />
           </button>
-          <button onClick={() => { setKeyInput(apiKey); setShowSettings(!showSettings); }} className="text-muted-foreground hover:text-primary p-1">
+          <button onClick={() => { setKeyInput(apiKey); setShowSettings(!showSettings); }} className="text-muted-foreground hover:text-primary transition-colors">
             <Settings className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {showSettings && (
-        <div className="bg-muted/80 rounded-md p-3 mb-3 border border-primary/30">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-primary font-bold uppercase">System Access Key</span>
-            <button onClick={() => setShowSettings(false)}><X className="w-3 h-3" /></button>
-          </div>
+        <div className="bg-muted/90 p-3 rounded mb-3 border border-primary/30">
+          <label className="text-[10px] text-primary block mb-1 uppercase font-bold">Gemini API Key</label>
           <div className="flex gap-2">
-            <input 
-              type="password" 
-              value={keyInput} 
-              onChange={e => setKeyInput(e.target.value)}
-              className="bg-background border border-primary/20 rounded px-2 py-1 text-sm flex-1 outline-none" 
-            />
-            <button 
-              onClick={() => { setApiKey(keyInput); setShowSettings(false); }}
-              className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm"
-            >
-              SAVE
-            </button>
+            <input type="password" value={keyInput} onChange={e => setKeyInput(e.target.value)}
+              className="bg-background border border-primary/20 rounded px-2 py-1 text-sm flex-1 outline-none focus:border-primary" />
+            <button onClick={() => { setApiKey(keyInput); setShowSettings(false); }}
+              className="bg-primary text-primary-foreground px-3 py-1 rounded text-xs font-bold">SAVE</button>
           </div>
         </div>
       )}
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 scrollbar-hide">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-sm px-3 py-2 text-sm ${
-              m.role === 'user' 
-                ? 'bg-primary/10 border-r-2 border-primary text-primary-foreground' 
-                : 'bg-muted/30 border-l-2 border-muted-foreground'
+            <div className={`max-w-[85%] rounded-md px-3 py-2 text-sm ${
+              m.role === 'user' ? 'bg-primary/10 border-r-2 border-primary' : 'bg-muted/50 border-l-2 border-primary/50'
             }`}>
-              <div className="text-[10px] uppercase opacity-50 mb-1 font-bold">
-                {m.role === 'user' ? 'Subject' : 'Asiris'}
-              </div>
+              <div className="text-[9px] uppercase opacity-40 mb-1 font-bold">{m.role === 'user' ? 'Subject' : 'Asiris'}</div>
               {m.content}
             </div>
           </div>
         ))}
-        {loading && (
-          <div className="text-[10px] text-primary animate-pulse uppercase tracking-widest">
-            Анализ данных...
-          </div>
-        )}
+        {loading && <div className="text-[10px] text-primary animate-pulse tracking-widest uppercase">Анализ протокола...</div>}
       </div>
 
-      <div className="flex gap-2 pt-2 border-t border-primary/10">
-        <input 
-          value={input} 
-          onChange={e => setInput(e.target.value)}
+      <div className="flex gap-2 border-t border-primary/10 pt-3">
+        <input value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
-          placeholder="ВВЕДИТЕ ЗАПРОС..."
-          className="bg-transparent border border-primary/20 rounded-sm px-3 py-2 text-sm flex-1 outline-none" 
-        />
-        <button 
-          onClick={sendMessage} 
-          disabled={loading || !input.trim()} 
-          className="bg-primary/20 hover:bg-primary/40 text-primary p-2 rounded-sm disabled:opacity-20"
-        >
+          placeholder="ВВОД ПРИКАЗА..."
+          className="bg-transparent border border-primary/20 rounded-sm px-3 py-2 text-sm flex-1 outline-none focus:border-primary/50" />
+        <button onClick={sendMessage} disabled={loading || !input.trim()}
+          className="bg-primary/20 hover:bg-primary/30 text-primary p-2 rounded-sm disabled:opacity-20 transition-all">
           <Send className="w-4 h-4" />
         </button>
       </div>
