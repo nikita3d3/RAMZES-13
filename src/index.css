@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 90%;
+
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 90%;
+
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 90%;
+
+    --primary: 0 72% 51%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 80%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 0 72% 51%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 15%;
+    --input: 0 0% 12%;
+    --ring: 0 72% 51%;
+
+    --radius: 0.75rem;
+
+    --glow-sm: 0 0 10px hsl(0 72% 51% / 0.3);
+    --glow-md: 0 0 20px hsl(0 72% 51% / 0.4);
+    --glow-lg: 0 0 40px hsl(0 72% 51% / 0.3);
+
+    --glass-bg: hsl(0 0% 100% / 0.03);
+    --glass-border: hsl(0 0% 100% / 0.08);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .glow-border {
+    box-shadow: var(--glow-sm);
+    border: 1px solid hsl(0 72% 51% / 0.2);
+  }
+
+  .glow-border-hover:hover {
+    box-shadow: var(--glow-md);
+    border-color: hsl(0 72% 51% / 0.4);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 10px hsl(0 72% 51% / 0.5);
+  }
+
+  .noise-bg {
+    position: relative;
+  }
+  .noise-bg::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .red-gradient-bar {
+    background: linear-gradient(90deg, hsl(0 72% 30%), hsl(0 72% 51%), hsl(0 72% 60%));
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
