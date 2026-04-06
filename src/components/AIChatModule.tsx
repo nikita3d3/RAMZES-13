@@ -79,13 +79,14 @@ const AIChatModule = () => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: ASIRIS_SYSTEM + getUserContext() }] },
-            contents: msgs.map(m => ({
-              role: m.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: m.content }],
-            })),
-          }),
+         body: JSON.stringify({
+  contents: [
+    {
+      role: 'user',
+      parts: [{ text: ${ASIRIS_SYSTEM} ${getUserContext()}\n\nПользователь: ${msgs[msgs.length - 1].content} }]
+    }
+  ]
+}),
         }
       );
       const data = await res.json();
