@@ -85,6 +85,7 @@ const AIChatModule = () => {
             }]
           })
         }
+      );
       const data = await res.json();
       if (data?.error) {
         const errMsg = data.error.code === 429
