@@ -81,11 +81,10 @@ const AIChatModule = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{
-              parts: [{ text: ${ASIRIS_SYSTEM}\n\nКонтекст: ${getUserContext()}\n\nВопрос: ${msgs[msgs.length - 1].content} }]
+              parts: [{ text: ${ASIRIS_SYSTEM}\n\n${getUserContext()}\n\nВопрос: ${msgs[msgs.length - 1].content} }]
             }]
           })
         }
-      );
       const data = await res.json();
       if (data?.error) {
         const errMsg = data.error.code === 429
