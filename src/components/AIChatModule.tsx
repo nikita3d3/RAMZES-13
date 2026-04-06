@@ -13,10 +13,11 @@ const ASIRIS_SYSTEM = `Ты — Асирис, холодный и дисципл
 Отвечай на русском языке. Будь лаконичен.`;
 
 const AIChatModule = () => {
-  const [messages, setMessages] = useLocalStorage<Message[]>('ramzes-chat', []);
+  const [messages, setMessages] = useLocalStorage<Message[]>('ramzes-chat-v3', []);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [apiKey, setApiKey] = useLocalStorage('ramzes-gemini-key-v2', '');
+  // Твой новый ключ
+  const [apiKey, setApiKey] = useLocalStorage('ramzes-gemini-key-v3', 'AIzaSyDdxH5Lgg3z_aQaNi4oS0vaOOzhMbpKXKs');
   const [showSettings, setShowSettings] = useState(false);
   const [keyInput, setKeyInput] = useState(apiKey);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -33,25 +34,8 @@ const AIChatModule = () => {
       const balance = txs.reduce((s: number, t: any) => t.type === 'income' ? s + t.amount : s - t.amount, 0);
       const goal = localStorage.getItem('ramzes-goal') || '100000';
       const subjects = JSON.parse(localStorage.getItem('ramzes-subjects') || '[]');
-      const criteria = JSON.parse(localStorage.getItem('ramzes-bio-criteria') || '[]');
-
-      let bioIndex = 'нет данных';
-      if (criteria.length > 0) {
-        const allPoints: Record<string, number[]> = {};
-        criteria.forEach((c: any) => {
-          (c.data || []).forEach((dp: any) => {
-            if (!allPoints[dp.date]) allPoints[dp.date] = [];
-            allPoints[dp.date].push(c.inverted ? (10 - dp.value) : dp.value);
-          });
-        });
-        const entries = Object.entries(allPoints).sort((a, b) => a[0].localeCompare(b[0]));
-        if (entries.length > 0) {
-          const last = entries[entries.length - 1][1];
-          bioIndex = String(Math.round((last.reduce((a: number, b: number) => a + b, 0) / last.length) * 10) / 10);
-        }
-      }
-
-      return `\nПоказатели пользователя:\n- Баланс: ${balance}, Цель: ${goal}\n- Задачи: ${subjects.length}\n- Био-индекс: ${bioIndex}/10`;
+      
+      return `\nОТЧЕТ СИСТЕМЫ:\n- Баланс: ${balance}\n- Цель: ${goal}\n- Активных задач: ${subjects.length}`;
     } catch { return ''; }
   };
 
@@ -59,23 +43,20 @@ const AIChatModule = () => {
     if (!apiKey) { setShowSettings(true); return; }
     setLoading(true);
     try {
-      // Ключевое исправление: формирование промпта внутри правильной структуры v1beta
-      const promptText = `${ASIRIS_SYSTEM}\n\n${getUserContext()}\n\nВопрос: ${msgs[msgs.length - 1].content}`;
+      const promptText = `${ASIRIS_SYSTEM}\n\n${getUserContext()}\n\nЗАПРОС СУБЪЕКТА: ${msgs[msgs.length - 1].content}`;
 
       const res = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
-  {
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{
-              role: "user",
-              parts: [{ text: promptText }]
-            }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 500,
-            }
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: promptText }]
+              }
+            ]
           })
         }
       );
@@ -83,14 +64,16 @@ const AIChatModule = () => {
       const data = await res.json();
       
       if (data?.error) {
-        const errorMsg = `⚠️ Ошибка (${data.error.code}): ${data.error.message}`;
-        setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `⚠️ ОТКАЗ СИСТЕМЫ (${data.error.code}): ${data.error.message}` 
+        }]);
       } else {
-        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Ошибка ядра.';
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'ОШИБКА ЯДРА: Нет ответа.';
         setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
       }
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Ошибка связи.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ КРИТИЧЕСКИЙ СБОЙ СВЯЗИ.' }]);
     } finally {
       setLoading(false);
     }
@@ -106,28 +89,28 @@ const AIChatModule = () => {
   };
 
   return (
-    <div className="glass-panel rounded-lg p-4 h-[600px] flex flex-col bg-background/50 border border-primary/20 shadow-xl">
+    <div className="glass-panel rounded-lg p-4 h-[600px] flex flex-col bg-background/80 border border-primary/20 shadow-2xl overflow-hidden font-sans">
       <div className="flex items-center gap-2 mb-4 border-b border-primary/10 pb-2">
         <Bot className="w-5 h-5 text-primary" />
-        <h2 className="font-display text-primary uppercase tracking-widest">Asiris Neural Core</h2>
+        <h2 className="font-display text-primary text-sm uppercase tracking-[0.2em]">Asiris Neural Core</h2>
         <div className="ml-auto flex gap-2">
-          <button onClick={() => setMessages([])} className="text-muted-foreground hover:text-destructive transition-colors">
+          <button onClick={() => setMessages([])} className="text-muted-foreground hover:text-destructive transition-colors p-1">
             <Trash2 className="w-4 h-4" />
           </button>
-          <button onClick={() => { setKeyInput(apiKey); setShowSettings(!showSettings); }} className="text-muted-foreground hover:text-primary transition-colors">
+          <button onClick={() => { setKeyInput(apiKey); setShowSettings(!showSettings); }} className="text-muted-foreground hover:text-primary transition-colors p-1">
             <Settings className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {showSettings && (
-        <div className="bg-muted/90 p-3 rounded mb-3 border border-primary/30">
-          <label className="text-[10px] text-primary block mb-1 uppercase font-bold">Gemini API Key</label>
+        <div className="bg-black/40 p-3 rounded border border-primary/30 mb-3 animate-in fade-in slide-in-from-top-1">
+          <label className="text-[10px] text-primary uppercase font-bold mb-2 block">System Access Key</label>
           <div className="flex gap-2">
             <input type="password" value={keyInput} onChange={e => setKeyInput(e.target.value)}
-              className="bg-background border border-primary/20 rounded px-2 py-1 text-sm flex-1 outline-none focus:border-primary" />
+              className="bg-background/50 border border-primary/20 rounded px-2 py-1 text-xs flex-1 outline-none focus:border-primary text-primary" />
             <button onClick={() => { setApiKey(keyInput); setShowSettings(false); }}
-              className="bg-primary text-primary-foreground px-3 py-1 rounded text-xs font-bold">SAVE</button>
+              className="bg-primary/20 text-primary border border-primary/40 px-3 py-1 rounded text-[10px] font-bold hover:bg-primary/40">SAVE</button>
           </div>
         </div>
       )}
@@ -135,25 +118,33 @@ const AIChatModule = () => {
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 scrollbar-hide">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-md px-3 py-2 text-sm ${
-              m.role === 'user' ? 'bg-primary/10 border-r-2 border-primary' : 'bg-muted/50 border-l-2 border-primary/50'
+            <div className={`max-w-[90%] rounded-lg px-4 py-3 text-sm ${
+              m.role === 'user' 
+                ? 'bg-primary/10 border border-primary/20 text-primary-foreground' 
+                : 'bg-muted/40 border border-white/5 text-foreground'
             }`}>
-              <div className="text-[9px] uppercase opacity-40 mb-1 font-bold">{m.role === 'user' ? 'Subject' : 'Asiris'}</div>
+              <div className="text-[9px] uppercase opacity-40 mb-1 font-black tracking-widest">
+                {m.role === 'user' ? 'Subject' : 'Asiris Unit'}
+              </div>
               {m.content}
             </div>
           </div>
         ))}
-        {loading && <div className="text-[10px] text-primary animate-pulse tracking-widest uppercase">Анализ протокола...</div>}
+        {loading && (
+          <div className="flex items-center gap-2 text-[10px] text-primary animate-pulse tracking-[0.3em] uppercase ml-2">
+             <span className="w-1.5 h-1.5 bg-primary rounded-full" /> Анализ данных...
+          </div>
+        )}
       </div>
 
-      <div className="flex gap-2 border-t border-primary/10 pt-3">
+      <div className="flex gap-2 border-t border-primary/10 pt-4">
         <input value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
-          placeholder="ВВОД ПРИКАЗА..."
-          className="bg-transparent border border-primary/20 rounded-sm px-3 py-2 text-sm flex-1 outline-none focus:border-primary/50" />
+          placeholder="ВВОД ДАННЫХ..."
+          className="bg-black/20 border border-primary/10 rounded-md px-4 py-2 text-sm flex-1 outline-none focus:border-primary/40 placeholder:text-muted-foreground/30 text-primary" />
         <button onClick={sendMessage} disabled={loading || !input.trim()}
-          className="bg-primary/20 hover:bg-primary/30 text-primary p-2 rounded-sm disabled:opacity-20 transition-all">
-          <Send className="w-4 h-4" />
+          className="bg-primary/10 hover:bg-primary/20 text-primary p-2 rounded-md disabled:opacity-10 transition-all border border-primary/20">
+          <Send className="w-5 h-5" />
         </button>
       </div>
     </div>
