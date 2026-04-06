@@ -90,15 +90,20 @@ const AIChatModule = () => {
       const data = await res.json();
       if (data?.error) {
         const errMsg = data.error.code === 429
-          ? '⚠ Лимит API исчерпан. Подожди минуту или проверь тарифный план Gemini.'
-          : `⚠ Ошибка API (${data.error.code}): ${data.error.message?.slice(0, 100)}`;
+          ? '⚠ Лимит API исчерпан. Подожди минуту.'
+          : ⚠ Ошибка API (${data.error.code}): ${data.error.message?.slice(0, 100)};
         setMessages(prev => [...prev, { role: 'assistant', content: errMsg }]);
         return;
       }
+
       const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Ошибка связи с нейросетью.';
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: '⚠ Ошибка подключения. Проверь API ключ.' }]);
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'assistant', content: '⚠ Критическая ошибка соединения.' }]);
+    } finally {
+      setLoading(false);
+    }
+  };
     } finally {
       setLoading(false);
     }
