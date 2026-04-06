@@ -61,18 +61,18 @@ const AIChatModule = () => {
     }
   };
 
-  const sendWithMessages = async (msgs: Message[]) => {
+const sendWithMessages = async (msgs: Message[]) => {
     if (!apiKey) { 
       setShowSettings(true); 
       return; 
     }
     setLoading(true);
     try {
-      // Формируем полный промпт для модели
-      const currentPrompt = `${ASIRIS_SYSTEM}\n\n${getUserContext()}\n\nВопрос: ${msgs[msgs.length - 1].content}`;
+      // Формируем единый текст: Инструкция Асириса + Данные пользователя + Вопрос
+      const fullPrompt = `${ASIRIS_SYSTEM}\n\n${getUserContext()}\n\nЗАПРОС СУБЪЕКТА: ${msgs[msgs.length - 1].content}`;
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ const AIChatModule = () => {
             contents: [
               {
                 role: "user",
-                parts: [{ text: currentPrompt }]
+                parts: [{ text: fullPrompt }]
               }
             ],
             generationConfig: {
@@ -94,10 +94,22 @@ const AIChatModule = () => {
       const data = await res.json();
       
       if (data?.error) {
-        const errMsg = `⚠️ Ошибка API (${data.error.code}): ${data.error.message?.slice(0, 100)}`;
+        // Если API вернул ошибку (ключ, лимиты и т.д.)
+        const errMsg = `⚠️ Сбой системы (${data.error.code}): ${data.error.message}`;
         setMessages(prev => [...prev, { role: 'assistant', content: errMsg }]);
         return;
       }
+
+      // Извлекаем ответ
+      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'ОТКАЗ: Нейросеть не прислала ответ.';
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+      
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ КРИТИЧЕСКАЯ ОШИБКА: Соединение с ядром разорвано.' }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
       const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Ошибка связи с нейросетью.';
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
