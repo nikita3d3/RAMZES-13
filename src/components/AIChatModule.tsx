@@ -74,19 +74,16 @@ const AIChatModule = () => {
     if (!apiKey) { setShowSettings(true); return; }
     setLoading(true);
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`,
+     const res = await fetch(
+        https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey},
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-  contents: [
-    {
-      role: 'user',
-      parts: [{ text: ${ASIRIS_SYSTEM} ${getUserContext()}\n\nПользователь: ${msgs[msgs.length - 1].content} }]
-    }
-  ]
-}),
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: ${ASIRIS_SYSTEM}\n\nКонтекст: ${getUserContext()}\n\nВопрос: ${msgs[msgs.length - 1].content} }]
+            }]
+          })
         }
       );
       const data = await res.json();
