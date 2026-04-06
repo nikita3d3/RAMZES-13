@@ -70,7 +70,7 @@ const AIChatModule = () => {
       const fullPrompt = `${ASIRIS_SYSTEM}\n\n${getUserContext()}\n\nЗАПРОС СУБЪЕКТА: ${msgs[msgs.length - 1].content}`;
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
